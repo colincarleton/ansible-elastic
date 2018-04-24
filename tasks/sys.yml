@@ -1,0 +1,40 @@
+---
+- name: install java
+  yum:
+    name: java-1.8.0-openjdk-1:1.8.0.161-0.b14.el7_4.x86_64
+    state: present
+  when:
+    - not jdk_status
+    - jdk_version is defined
+
+- name: check swap
+  shell: swapon -s
+  when: es_swapoff
+  register: es_swap_status
+  changed_when: es_swapoff_status is defined
+
+- name: disable swap
+  shell: swapoff -a
+  when: es_swapoff_status is defined
+
+- name: comment out fstab swap
+  replace:
+    path: /etc/fstab
+    regexp: (^((?!#).)\S+\s+(swap)\s+(swap).*)
+    replace: '#\1'
+    backup: yes
+  when: es_swapoff
+
+- sysctl:
+    name: vm.max_map_count
+    value: "{{ es_max_map_count }}"
+    state: present
+  when: es_max_map
+
+- file:
+    path: "{{ item.value }}"
+    state: directory
+    owner: elasticsearch
+    group: elasticsearch
+    mode: 0755
+  with_dict: "{{ es_path_settings }}"

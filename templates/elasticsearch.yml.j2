@@ -32,6 +32,10 @@ network.host: {{ "[ _" ~ ansible_interfaces | union(es_network_interface_include
 ## --- Gateway Settings ---------- ##
 {{ es_gateway_settings | to_nice_yaml }}
 {% endif %}
+{% if es_threadpool_settings is defined %}
+## --- Thead Pool Settings ------- ##
+{{ es_threadpool_settings | to_nice_yaml }}
+{% endif %}
 {% if es_various_settings is defined %}
 ## --- Various Settings ---------- ##
 {{ es_various_settings | to_nice_yaml }}

@@ -1,11 +1,17 @@
-# Ansible Managed
+## Ansible Managed
 ## JVM configuration
 
 # Xms represents the initial size of total heap space
 # Xmx represents the maximum size of total heap space
-
--Xms{{ es_xms }}
--Xmx{{ es_xmx }}
+{% if jdk_auto_heap == True %}
+# Heap automatically set to 47% of RAM
+-Xms{{ (ansible_memtotal_mb *0.47)|int|abs }}m
+-Xmx{{ (ansible_memtotal_mb *0.47)|int|abs }}m
+{% else %}
+{% for key, value in jdk_heapsize.iteritems() %}
+-{{ key|title }}{{ value }}
+{% endfor %}
+{% endif %}
 
 ## GC configuration
 -XX:+UseConcMarkSweepGC
@@ -80,3 +86,6 @@
 # WARNING: This option will be removed in Elasticsearch 6.0.0 and is provided
 # only for migration purposes.
 #-Delasticsearch.json.allow_unquoted_field_names=true
+
+
+apsrd00545

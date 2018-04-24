@@ -1,13 +1,14 @@
 ---
-- name: Enable ElasticSearch
-  service:
-    name: elasticsearch
-    enabled: yes
-
-- name: Reload Systemd
+- name: daemon reload
   systemd: daemon_reload=yes
 
-- name: Start ElasticSearch
+- name: restart elastic
   service:
     name: elasticsearch
     state: restarted
+  when: es_allow_restart
+
+- name: start elastic
+  service:
+    name: elasticsearch
+    state: started

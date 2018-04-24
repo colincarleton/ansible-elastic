@@ -1,3 +1,4 @@
+#jinja2: trim_blocks:False
 ## Ansible Managed
 appender.audit_rolling.type = RollingFile
 appender.audit_rolling.name = audit_rolling
@@ -7,10 +8,10 @@ appender.audit_rolling.layout.pattern = [%d{ISO8601}] %m%n
 appender.audit_rolling.filePattern = ${sys:es.logs.base_path}${sys:file.separator}${sys:es.logs.cluster_name}_access-%d{yyyy-MM-dd}-%i.log.gz
 appender.audit_rolling.policies.type = Policies
 appender.audit_rolling.policies.time.type = TimeBasedTriggeringPolicy
-appender.audit_rolling.policies.time.interval = 1
+appender.audit_rolling.policies.time.interval = {{ es_xpack_log_retention_days }}
 appender.audit_rolling.policies.time.modulate = true
 appender.audit_rolling.policies.size.type = SizeBasedTriggeringPolicy
-appender.audit_rolling.policies.size.size = 1MB
+appender.audit_rolling.policies.size.size = {{ es_xpack_log_retention_size }}
 appender.audit_rolling.strategy.type = DefaultRolloverStrategy
 appender.audit_rolling.strategy.fileIndex = nomax
 appender.audit_rolling.strategy.action.type = Delete
@@ -18,14 +19,19 @@ appender.audit_rolling.strategy.action.basepath = ${sys:es.logs.base_path}
 appender.audit_rolling.strategy.action.condition.type = IfFileName
 appender.audit_rolling.strategy.action.condition.glob = ${sys:es.logs.cluster_name}_access-*
 appender.audit_rolling.strategy.action.condition.nested_condition.type = IfAccumulatedFileSize
-appender.audit_rolling.strategy.action.condition.nested_condition.exceeds = 10MB
+appender.audit_rolling.strategy.action.condition.nested_condition.exceeds = {{ es_xpack_log_retention_size_nested }}
 
 logger.xpack_security_audit_logfile.name = org.elasticsearch.xpack.security.audit.logfile.LoggingAuditTrail
-logger.xpack_security_audit_logfile.level = debug
+logger.xpack_security_audit_logfile.level = {{ es_xpack_log_level }}
 logger.xpack_security_audit_logfile.appenderRef.audit_rolling.ref = audit_rolling
 logger.xpack_security_audit_logfile.additivity = false
 
+{% if es_xpack_log_filter_accounts is defined %}
 appender.audit_rolling.filter.regex.type = RegexFilter
-appender.audit_rolling.filter.regex.onMatch = ACCEPT
-appender.audit_rolling.filter.regex.regex = .*principal=.elastic.*|.*principal=._xpack_security.*
-appender.audit_rolling.filter.regex.onMisMatch = DENY
+appender.audit_rolling.filter.regex.onMatch = DENY
+appender.audit_rolling.filter.regex.regex =
+{%- for user in es_xpack_log_filter_accounts -%}
+  .*principal=.{{ user }}.*{%- if not loop.last %}|{% endif -%}
+{% endfor %}
+appender.audit_rolling.filter.regex.onMisMatch = ACCEPT
+{% endif %}

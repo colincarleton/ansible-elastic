@@ -1,4 +1,11 @@
 ---
+- name: Copy ElasticSearch Security
+  copy:
+    src: "{{ item }}"
+    dest: /tmp/security/
+  with_fileglob:
+    - "/etc/ansible/artifacts/elasticsearch-5.4/installers/*"
+
 - name: Copy ElasticSearch Key
   copy:
     src: "{{ ansible_artifacts }}/vagrant/certs/{{ ansible_nodename }}/{{ es_ssl_key }}"
@@ -19,4 +26,3 @@
     dest: /etc/elasticsearch/certs/
     owner: elasticsearch
     group: elasticsearch
-

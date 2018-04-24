@@ -1,20 +1,29 @@
 ---
-- name: Place ElasticSearch Config
+- name: elastic config
   template:
     src: elasticsearch.yml.j2
     dest: /etc/elasticsearch/elasticsearch.yml
+  notify: restart elastic
 
-- name: Place Log4j Settings
+- name: log4j settings
   template:
     src: elasticsearch.log4j2.properties.j2
     dest: /etc/elasticsearch/log4j2.properties
+  notify: restart elastic
 
-- name: Set ElasticSearch JVM Options
+- name: elastic jvm options
   template:
     src: jvm.options.j2
     dest: /etc/elasticsearch/jvm.options
+  notify: restart elastic
 
-- name: Set ElasticSearch Limits
+- name: elastic systemd
   template:
     src: elasticsearch.service.j2
     dest: /usr/lib/systemd/system/elasticsearch.service
+  notify: daemon reload
+
+- name: enable elastic
+  service:
+    name: elasticsearch
+    enabled: yes

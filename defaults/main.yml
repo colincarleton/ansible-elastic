@@ -1,7 +1,185 @@
 ---
-# Defaults Work Around
-use_defaults: "true"
+## --- Version info and installation repo ----------------------------------- ##
+es_version: 5.6.1
+es_upgrade: False
+es_allow_restart: False
 
-# Version info and installation repo
-es: elasticsearch-5.6.1
-repo: elasticsearch-5.6.1
+## --- System Settings ------------------------------------------------------ ##
+es_swapoff: False
+es_max_map: True
+es_max_map_count: 262144
+es_filelimit: 65536
+es_nproc: 4096
+
+## --- Java Settings -------------------------------------------------------- ##
+jdk_upgrade: False
+jdk_version: java-1.8.0-openjdk-1:1.8.0.161-0.b14.el7_4.x86_64
+jdk_auto_heap: True
+jdk_heapsize:
+  xms: 256m
+  xmx: 256m
+
+
+## --- Cluster Settings ----------------------------------------------------- ##
+es_cluster_settings:
+  cluster.name: ansible_test
+
+## --- Node Settings -------------------------------------------------------- ##
+es_node_settings:
+  node.name: '{{ ansible_hostname }}'
+  node.master: True
+  node.data: True
+
+## --- Path Settings -------------------------------------------------------- ##
+es_path_settings:
+  path.data: /var/lib/elasticsearch
+  path.logs: /var/log/elasticsearch
+  path.repo: /tmp/backup
+
+## --- Bootstrap Settings --------------------------------------------------- ##
+es_bootstrap_settings:
+  bootstrap.memory_lock: True
+  bootstrap.system_call_filter: True
+
+## --- Network Settings ----------------------------------------------------- ##
+es_network_settings:
+  network.host: '{{ es_network_interfaces.split(",") }}'
+  http.port: 9200
+
+es_network_interfaces: '{{ " _" ~ ansible_interfaces | union(es_network_interface_include) | difference(es_network_interface_exlude) | join("_ , _") ~ "_" }}'
+
+es_network_interface_include:
+  - site
+  - local
+es_network_interface_exlude:
+  - lo
+
+## --- Discovery Settings --------------------------------------------------- ##
+es_discovery_settings:
+  discovery.zen.ping.unicast.hosts: '{{ es_unicast_hosts }}'
+  discovery.zen.minimum_master_nodes: 1
+
+es_unicast_hosts:
+  - default-node1
+
+## --- Gateway Settings ----------------------------------------------------- ##
+es_gateway_settings:
+  gateway.expected_nodes: 1
+  gateway.recover_after_time: 120m
+  gateway.recover_after_nodes: 1
+
+## --- Thread Pool Settings ------------------------------------------------- ##
+es_threadpool_settings:
+  thread_pool:
+    index.queue_size: 200
+    search.queue_size: 1000
+    get.queue_size: 1000
+    bulk.queue_size: 2000
+
+## --- Various Settings ----------------------------------------------------- ##
+es_various_settings:
+  action.destructive_requires_name: True
+  action.auto_create_index: True
+  script.painless.regex.enabled: true
+
+## --- Remote Reindex Settings ---------------------------------------------- ##
+es_remote_settings:
+  reindex.remote.whitelist: http://localhost:9200/
+
+## --- Elasticsearch Plugins ------------------------------------------------ ##
+es_plugins:
+  - plugin:
+      plugin_name: "x-pack"
+      plugin_version: '{{ es_version }}'
+      list_name: "x-pack"
+
+## --- X-Pack Settings ------------------------------------------------------ ##
+es_xpack: True
+es_xpack_ad_auth: True
+es_xpack_export: False
+es_ssl: False
+es_xpack_options:
+  xpack.graph.enabled: True
+  xpack.monitoring.enabled: True
+  xpack.security.audit.enabled: True
+  #xpack.security.audit.index.events.exclude:
+  xpack.security.audit.index.events.emit_request_body: True
+  xpack.security.audit.index.events.include:
+    - anonymous_access_denied
+    - authentication_success
+    - authentication_failed
+    - realm_authentication_failed
+    - access_denied
+    - access_granted
+    - run_as_granted
+    - run_as_denied
+    - tampered_request
+    - connection_granted
+    - connection_denied
+  #xpack.security.audit.logfile.events.exclude:
+  xpack.security.audit.logfile.events.emit_request_body: True
+  xpack.security.audit.logfile.events.include:
+    - anonymous_access_denied
+    - authentication_success
+    - authentication_failed
+    - realm_authentication_failed
+    - access_denied
+    - access_granted
+    - run_as_granted
+    - run_as_denied
+    - tampered_request
+    - connection_granted
+    - connection_denied
+  xpack.security.audit.outputs: [ index, logfile ]
+  xpack.security.enabled: True
+  xpack.watcher.enabled: True
+
+es_xpack_log_level: debug
+es_xpack_log_retention_size: 100MB
+es_xpack_log_retention_size_nested: 1GB
+es_xpack_log_retention_days: 90
+es_xpack_log_filter_accounts:
+  - elasticsearch
+  - kibana
+  - logstash_systm
+
+## --- X-Pack Exporters ----------------------------------------------------- ##
+es_xpack_exporters:
+  xpack.monitoring.exporters:
+    id1:
+      type: http
+      host: ["http://localhost:9200"]
+      auth.username: elastic
+      auth.password: changeme
+
+## --- X-Pack Security Realms ----------------------------------------------- ##
+es_xpack_security_realms:
+  xpack:
+    security:
+      authc:
+        realms:
+          active_directory:
+            type: active_directory
+            order: 1
+            domain_name: domain.com
+            url: ldap://domain.com:389
+            follow_referrals: False
+            load_balance:
+              type: dns_round_robin
+            unmapped_groups_as_roles: True
+          native:
+            type: native
+            order: 0
+
+## --- X-Pack Watchers ------------------------------------------------------ ##
+es_xpack_watcher:
+  xpack.notification.email.account:
+    exchange_account:
+      profile: outlook
+      email_defaults:
+        from: default-cluster@domain.com
+      smtp:
+        auth: false
+        starttls.enable: true
+        host: mail.domain.com
+        port: 25

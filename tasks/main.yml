@@ -1,42 +1,62 @@
 ---
-# Loads Default Variables
-- name: Load Default Variables
-  include_vars:
-    dir: '../defaults'
-  when: use_defaults == "true"
+- name: get installed packages
+  yum:
+    list: installed
+  register: yum_installed
+  when: ansible_os_family == 'RedHat'
 
-# # Checks if Elastic is installed
-# - name: Check if Elastic is installed
-#   yu:m:
-#     list={{ es }}
-#   register: es_installed
-#
-# Elastic Install
-- name: Elastic Install
+- name: check if elastic is installed
+  set_fact:
+    es_status:  "{{yum_installed|json_query(jsonquery) }}"
+  vars:
+    jsonquery: "results[?name=='elasticsearch']"
+
+- name: check elastic version
+  set_fact:
+    es_version_info: "{{ es_status|\
+                      json_query(\"[?version=='\" + es_version + \"']\") }}"
+  when: es_status
+
+- name: check if jdk is installed
+  set_fact:
+    jdk_status: "{{yum_installed|\
+                json_query(\"results[?name=='\" + jsonquery + \"']\") }}"
+  vars:
+    jsonquery: "{{ jdk_version[0:18] }}"
+
+- name: check jdk version
+  set_fact:
+    jdk_version_info: "{{ jdk_status|\
+                      json_query(\"[?version=='\" + jsonquery + \"']\") }}"
+  vars:
+    jsonquery: "{{ jdk_version[21:30] }}"
+  when: jdk_status
+
+# Currently not working
+# - name: remove old version of elastic
+#   include_tasks: upgrade.yml
+#   when:
+#     - es_version_info is defined
+#     - es_upgrade
+
+- name: new install of elastic
   include_tasks: install.yml
-  # when: es_installed.results|selectattr("yumstate", "match", "installed")|list|length == 0
+  when:
+    - not es_status
+    - es_version_info is not defined
 
-# To add: Elastic Upgrade Option
+- name: sys config
+  include_tasks: sys.yml
 
-# Elastic Configuration Options
-- name: Elastic Config
+- name: elastic config
   include_tasks: elastic.yml
 
-# ElasticSearch Plugins
-- name: Elastic Plugins
+- name: elastic plugins
   include_tasks: plugins.yml
   when: es_plugins is defined
 
-# X-Pack Configuration Options
-- name: X-Pack Config
-  include_tasks: xpack.yml
-  with_items:
-    - "{{ es_plugins }}"
-  when: (es_plugins is defined and "x-pack" in item.plugin.list_name)
-
-# Start and Enable ElasticSearch
-- name: Start and Enable ElasticSearch
-  service:
-    name: elasticsearch
-    enabled: yes
-    state: restarted
+- name: make sure elastic is started
+  debug:
+    msg: "trigger handler"
+  changed_when: true
+  notify: start elastic
